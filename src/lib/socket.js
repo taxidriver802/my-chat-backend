@@ -26,6 +26,11 @@ io.on("connection", async (socket) => {
   if (userId) {
     userSocketMap[userId] = socket.id;
 
+    const user = await User.findById(userId).select("-password");
+    if (user) {
+      socket.broadcast.emit("userJoined", user); // Emit to all *other* users
+    }
+
     // Join group chat rooms this user is part of
     const groups = await Group.find({ members: userId }, "_id");
     groups.forEach((group) => {

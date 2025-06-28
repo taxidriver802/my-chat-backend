@@ -18,7 +18,6 @@ export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
 
-// used to store online users
 const userSocketMap = {}; // {userId: socketId}
 
 io.on("connection", async (socket) => {
@@ -28,17 +27,15 @@ io.on("connection", async (socket) => {
 
     const user = await User.findById(userId).select("-password");
     if (user) {
-      socket.broadcast.emit("userJoined", user); // Emit to all *other* users
+      socket.broadcast.emit("userJoined", user);
     }
 
-    // Join group chat rooms this user is part of
     const groups = await Group.find({ members: userId }, "_id");
     groups.forEach((group) => {
       socket.join(group._id.toString());
     });
   }
 
-  // io.emit() is used to send events to all the connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
   socket.on("disconnect", async () => {

@@ -10,7 +10,10 @@ const messageSchema = new mongoose.Schema(
     receiverId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: function () {
+        // Only required if it's a 1-on-1 message
+        return !this.groupId;
+      },
     },
     text: {
       type: String,

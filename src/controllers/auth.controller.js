@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import cloudinary from "../lib/cloudinary.js";
 
 import { generateToken } from "../lib/utils.js";
+import { axiosInstance } from "../../../my-chat-frontend/src/lib/axios.js";
 
 export const signup = async (req, res) => {
   const { fullName, email, password } = req.body;
@@ -42,6 +43,8 @@ export const signup = async (req, res) => {
         email: newUser.email,
         profilePic: newUser.profilePic,
       });
+
+      io.emit("newUser", { _id: newUser._id, username: newUser.username });
     } else {
       res.status(400).json({ message: "Invalid user data" });
     }

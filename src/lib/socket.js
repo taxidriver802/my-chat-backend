@@ -3,6 +3,7 @@ import http from "http";
 import express from "express";
 
 import User from "../models/user.model.js";
+import Group from "../models/group.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -20,9 +21,17 @@ export function getReceiverSocketId(userId) {
 // used to store online users
 const userSocketMap = {}; // {userId: socketId}
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   const userId = socket.handshake.query.userId;
-  if (userId) userSocketMap[userId] = socket.id;
+  if (userId) {
+    userSocketMap[userId] = socket.id;
+
+    // Join group chat rooms this user is part of
+    const groups = await Group.find({ members: userId }, "_id");
+    groups.forEach((group) => {
+      socket.join(group._id.toString());
+    });
+  }
 
   // io.emit() is used to send events to all the connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
@@ -56,6 +65,14 @@ io.on("connection", (socket) => {
       io.to(receiverSocketId).emit("userStopTyping", senderId);
     }
   });
+
+  socket.on("groupTyping", ({ groupId, user }) => {
+    socket.to(groupId).emit("groupTyping", user);
+  });
+
+  socket.on("groupStopTyping", ({ groupId }) => {
+    socket.to(groupId).emit("groupStopTyping");
+  });
 });
 
-export { io, app, server };
+export { io, app, server, userSocketMap };

@@ -88,6 +88,15 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
+    if (
+      senderId.blockedUsers.includes(receiverId) ||
+      receiverId.blockedUsers.includes(senderId.toString())
+    ) {
+      return res
+        .status(403)
+        .json({ error: "Messaging not allowed between blocked users." });
+    }
+
     let imageUrl;
     if (image) {
       // Upload base64 image to cloudinary

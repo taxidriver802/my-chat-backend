@@ -129,3 +129,55 @@ export const checkAuth = (req, res) => {
     res.status(500).json({ message: "Internal server error" });
   }
 };
+
+export const blockUser = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user._id);
+
+    const userIdToBlock = req.params.userId;
+    if (!userIdToBlock || userIdToBlock === req.user._id.toString()) {
+      return res.status(400).json({ error: "Invalid user to block." });
+    }
+
+    if (!currentUser.blockedUsers.includes(userIdToBlock)) {
+      currentUser.blockedUsers.push(userIdToBlock);
+      await currentUser.save();
+    }
+
+    res.status(200).json({ message: "User blocked successfully." });
+  } catch (err) {
+    console.error("Block error:", err);
+    res.status(500).json({ error: "Server error while blocking user." });
+  }
+};
+
+export const unblockUser = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user._id);
+    const userIdToUnblock = req.params.userId;
+
+    currentUser.blockedUsers = currentUser.blockedUsers.filter(
+      (id) => id.toString() !== userIdToUnblock
+    );
+
+    await currentUser.save();
+    res.status(200).json({ message: "User unblocked successfully." });
+  } catch (err) {
+    console.error("Unblock error:", err);
+    res.status(500).json({ error: "Server error while unblocking user." });
+  }
+};
+
+export const getBlockedUsers = async (req, res) => {
+  try {
+    const currentUser = await User.findById(req.user._id).populate(
+      "blockedUsers",
+      "fullName email profilePic"
+    );
+
+    res.status(200).json({ blocked: currentUser.blockedUsers });
+  } catch (err) {
+    console.error("Fetch blocked users error:", err);
+    res.status(500).json({ error: "Error fetching blocked users." });
+  }
+};

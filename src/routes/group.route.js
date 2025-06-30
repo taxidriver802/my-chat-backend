@@ -2,7 +2,6 @@ import express from "express";
 import Group from "../models/group.model.js";
 import Message from "../models/message.model.js";
 import auth from "../middleware/auth.middleware.js";
-import User from "../models/user.model.js";
 
 import { io, userSocketMap } from "../lib/socket.js";
 
@@ -19,19 +18,51 @@ router.post("/", auth, async (req, res) => {
         .json({ error: "Group name and at least one user are required." });
     }
 
-    // Ensure the creator is in the group
-    if (!userIds.includes(req.user._id.toString())) {
-      userIds.push(req.user._id.toString());
+    const MAX_GROUP_SIZE = 10;
+    const finalUserIds = [...new Set([...userIds, req.user._id.toString()])];
+
+    if (finalUserIds.length > MAX_GROUP_SIZE) {
+      return res
+        .status(400)
+        .json({ error: `Group size cannot exceed ${MAX_GROUP_SIZE} users.` });
+    }
+
+    // Fetch user objects with blockedUsers lists
+    const users = await User.find(
+      { _id: { $in: finalUserIds } },
+      "_id blockedUsers"
+    );
+
+    // Build map of userId => Set(blockedUsers)
+    const blockMap = new Map();
+    users.forEach((user) => {
+      blockMap.set(
+        user._id.toString(),
+        new Set(user.blockedUsers.map((id) => id.toString()))
+      );
+    });
+
+    // Check for any blocked relationships
+    for (let i = 0; i < finalUserIds.length; i++) {
+      for (let j = i + 1; j < finalUserIds.length; j++) {
+        const a = finalUserIds[i];
+        const b = finalUserIds[j];
+        if (blockMap.get(a)?.has(b) || blockMap.get(b)?.has(a)) {
+          return res.status(400).json({
+            error: `Group cannot be created. A block exists between users: ${a} and ${b}`,
+          });
+        }
+      }
     }
 
     const group = await Group.create({
       name,
-      members: userIds,
+      members: finalUserIds,
     });
 
     const populatedGroup = await group.populate("members", "username");
 
-    userIds.forEach((memberId) => {
+    finalUserIds.forEach((memberId) => {
       const socketId = userSocketMap[memberId];
       if (socketId) {
         io.to(socketId).emit("groupCreated", populatedGroup);

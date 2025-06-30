@@ -5,6 +5,7 @@ const groupSchema = new mongoose.Schema({
   members: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   createdAt: { type: Date, default: Date.now },
+  groupPic: { type: String, default: "/group.png" },
 });
 
 const Group = mongoose.model("Group", groupSchema);

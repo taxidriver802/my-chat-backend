@@ -60,7 +60,10 @@ router.post("/", auth, async (req, res) => {
       members: finalUserIds,
     });
 
-    const populatedGroup = await group.populate("members", "username");
+    const populatedGroup = await group.populate(
+      "members",
+      "fullName profilePic"
+    );
 
     finalUserIds.forEach((memberId) => {
       const socketId = userSocketMap[memberId];
@@ -144,7 +147,7 @@ router.get("/", auth, async (req, res) => {
   try {
     const groups = await Group.find({ members: req.user._id }).populate(
       "members",
-      "username"
+      "fullName profilePic"
     );
     res.json(groups);
   } catch (err) {

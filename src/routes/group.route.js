@@ -156,4 +156,20 @@ router.get("/", auth, async (req, res) => {
   }
 });
 
+router.patch("/:groupId/add-members", auth, async (req, res) => {
+  const { groupId } = req.params;
+  const { userIds } = req.body;
+
+  const group = await Group.findById(groupId);
+  if (!group) return res.status(404).json({ error: "Group not found" });
+
+  const existingIds = group.members.map((id) => id.toString());
+  const newIds = userIds.filter((id) => !existingIds.includes(id));
+
+  group.members.push(...newIds);
+  await group.save();
+
+  res.status(200).json(group);
+});
+
 export default router;

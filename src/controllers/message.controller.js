@@ -88,9 +88,18 @@ export const sendMessage = async (req, res) => {
     const { id: receiverId } = req.params;
     const senderId = req.user._id;
 
+    const [senderUser, receiverUser] = await Promise.all([
+      User.findById(senderId, "blockedUsers"),
+      User.findById(receiverId, "blockedUsers"),
+    ]);
+
+    if (!receiverUser) {
+      return res.status(404).json({ error: "Receiver not found." });
+    }
+
     if (
-      senderId.blockedUsers.includes(receiverId) ||
-      receiverId.blockedUsers.includes(senderId.toString())
+      senderUser?.blockedUsers?.includes(receiverId) ||
+      receiverUser?.blockedUsers?.includes(senderId.toString())
     ) {
       return res
         .status(403)
@@ -107,15 +116,18 @@ export const sendMessage = async (req, res) => {
     const newMessage = new Message({
       senderId: senderId.toString(),
       receiverId: groupId ? null : receiverId.toString(),
+      groupId: groupId || null,
       text,
       image: imageUrl,
     });
 
     await newMessage.save();
 
-    const receiverSocketId = getReceiverSocketId(receiverId);
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("newMessage", newMessage);
+    if (!groupId) {
+      const receiverSocketId = getReceiverSocketId(receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("newMessage", newMessage);
+      }
     }
 
     res.status(201).json(newMessage);

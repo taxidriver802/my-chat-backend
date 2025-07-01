@@ -172,4 +172,22 @@ router.patch("/:groupId/add-members", auth, async (req, res) => {
   res.status(200).json(group);
 });
 
+router.patch("/:groupId/profile-pic", auth, async (req, res) => {
+  const { groupId } = req.params;
+  const { profilePic } = req.body;
+
+  try {
+    const group = await Group.findByIdAndUpdate(
+      groupId,
+      { profilePic },
+      { new: true }
+    ).populate("members", "-password");
+
+    res.json(group);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to update group picture" });
+  }
+});
+
 export default router;
